@@ -1,0 +1,86 @@
+services:
+  # LLMwiki Application
+  llmwiki:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llmwiki-app
+    ports:
+      - "8000:8000"
+    environment:
+      # API Configuration
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SECRET_KEY=${SECRET_KEY:-change-this-to-a-secure-random-key}
+      
+      # Database Configuration
+      - DATABASE_URL=sqlite:////home/llmwiki/data/llmwiki.db
+      
+      # Application Settings
+      - LOG_LEVEL=info
+    
+    volumes:
+      # Persist database
+      - llmwiki_data:/home/llmwiki/data
+      
+      # Persist wiki and raw files if using volume-based storage
+      - ./wiki:/app/wiki
+      - ./raw:/app/raw
+      
+      # Optional: development mode with live code reload
+      # Uncomment for development
+      # - .:/app
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Named volumes for production deployments
+volumes:
+  llmwiki_data:
+    driver: local
+
+# Optional: PostgreSQL for production (comment out to use SQLite)
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: llmwiki-postgres
+  #   environment:
+  #     - POSTGRES_DB=llmwiki
+  #     - POSTGRES_USER=llmwiki
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD:-change-this-password}
+  #   volumes:
+  #     - llmwiki_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U llmwiki"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+networks:
+  default:
+    name: llmwiki-network
+    driver: bridge
