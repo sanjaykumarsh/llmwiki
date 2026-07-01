@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLMwiki - Compounding Knowledge Base</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Marked.js (Markdown parsing) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- D3.js (Force graph) -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Main Style -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ========================================
+         AUTHENTICATION SCREEN
+         ======================================== -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <i data-lucide="brain-circuit"></i>
+                    <h1>LLM<span class="accent-text">wiki</span></h1>
+                </div>
+
+                <!-- LOGIN FORM -->
+                <form id="login-form" class="auth-form active">
+                    <h2>Sign In</h2>
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="user"></i>
+                            <input type="text" id="login-username" placeholder="Enter username" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="lock"></i>
+                            <input type="password" id="login-password" placeholder="Enter password" required>
+                        </div>
+                    </div>
+                    <div id="login-error" class="error-msg hidden"></div>
+                    <button type="submit" class="primary-btn full-width">Sign In</button>
+                    <div class="auth-footer">
+                        Don't have an account? <a href="#" id="link-to-register">Create one</a>
+                    </div>
+                </form>
+
+                <!-- REGISTRATION FORM -->
+                <form id="register-form" class="auth-form">
+                    <h2>Create Account</h2>
+                    <div class="form-group">
+                        <label for="register-username">Username</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="user"></i>
+                            <input type="text" id="register-username" placeholder="Choose username" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">Email</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="mail"></i>
+                            <input type="email" id="register-email" placeholder="your@email.com" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password</label>
+                        <div class="input-with-icon">
+                            <i data-lucide="lock"></i>
+                            <input type="password" id="register-password" placeholder="Min 8 characters" required>
+                        </div>
+                    </div>
+                    <div id="register-error" class="error-msg hidden"></div>
+                    <button type="submit" class="primary-btn full-width">Create Account</button>
+                    <div class="auth-footer">
+                        Already have an account? <a href="#" id="link-to-login">Sign in</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================
+         MAIN APPLICATION
+         ======================================== -->
+    <div id="app-screen" class="app-screen hidden">
+        <div class="app-container">
+            <!-- TOP NAVIGATION BAR -->
+            <header class="app-header">
+                <div class="brand">
+                    <i data-lucide="brain-circuit" class="brand-icon"></i>
+                    <span class="brand-title">LLM<span class="accent-text">wiki</span></span>
+                    <span class="brand-subtitle">Obsidian-compliant RAG Compiler</span>
+                </div>
+
+                <!-- PROJECT SELECTOR -->
+                <div class="project-selector">
+                    <select id="project-select" class="project-dropdown">
+                        <option value="">Select Project...</option>
+                    </select>
+                    <button id="btn-new-project" class="icon-text-btn" title="Create new project">
+                        <i data-lucide="plus"></i> New Project
+                    </button>
+                </div>
+
+                <div class="header-right">
+                    <div id="api-status-badge" class="status-badge disconnected">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Gemini API Key Required</span>
+                    </div>
+                    <button id="btn-settings" class="icon-button" title="Configure API Settings">
+                        <i data-lucide="settings"></i>
+                    </button>
+                    <button id="btn-logout-header" class="secondary-btn small-btn" title="Logout">
+                        <i data-lucide="log-out"></i> Logout
+                    </button>
+                    <div class="user-menu">
+                        <button id="btn-user-menu" class="icon-button" title="User menu">
+                            <i data-lucide="user-circle"></i>
+                        </button>
+                        <div id="user-dropdown" class="dropdown hidden">
+                            <span id="current-user" class="dropdown-user">User</span>
+                            <span id="current-user-id" class="dropdown-user-id">ID: -</span>
+                            <hr>
+                            <a href="#" id="btn-logout" class="dropdown-item"><i data-lucide="log-out"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- MAIN THREE-PANEL LAYOUT -->
+            <div class="app-body">
+                
+                <!-- LEFT PANEL: FILE NAVIGATOR & MANAGER -->
+                <aside class="panel sidebar-panel">
+                    <div class="panel-header">
+                        <h3><i data-lucide="folder-open"></i> Workspace</h3>
+                    </div>
+                    
+                    <div class="sidebar-sections">
+                        <!-- RAW SOURCE DOCUMENTS SECTION -->
+                        <div class="sidebar-section">
+                            <div class="section-title">
+                                <span>RAW SOURCES (IMMUTABLE)</span>
+                                <button id="btn-upload-trigger" class="icon-text-btn" title="Upload source">
+                                    <i data-lucide="plus"></i> Add
+                                </button>
+                            </div>
+                            <div id="upload-project-banner" class="project-required-banner">
+                                <i data-lucide="alert-circle"></i>
+                                <span>No project selected. Choose or create a project to upload files.</span>
+                            </div>
+                            <input type="file" id="file-uploader" style="display: none;" multiple>
+                            <div id="raw-file-list" class="file-list empty">
+                                <div class="placeholder-text">No raw sources added.</div>
+                            </div>
+                        </div>
+
+                        <!-- WIKI PAGES SECTION -->
+                        <div class="sidebar-section wiki-pages-section">
+                            <div class="section-title">
+                                <span>COMPOUNDING WIKI</span>
+                                <span class="count-badge" id="wiki-count">0 pages</span>
+                            </div>
+                            <div id="wiki-file-list" class="file-list empty">
+                                <div class="placeholder-text">Wiki is empty.</div>
+                            </div>
+                        </div>
+
+                        <!-- PROJECT SHARING SECTION -->
+                        <div class="sidebar-section">
+                            <div class="section-title">
+                                <span>PROJECT SETTINGS</span>
+                            </div>
+                            <div class="project-settings">
+                                <button id="btn-share-project" class="secondary-btn full-width" disabled>
+                                    <i data-lucide="share2"></i> Share Project
+                                </button>
+                                <button id="btn-view-members" class="secondary-btn full-width" disabled>
+                                    <i data-lucide="users"></i> View Members
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+            <!-- CENTER PANEL: WIKI READER & GRAPH -->
+            <main class="panel workspace-panel">
+                <div class="panel-header workspace-header">
+                    <div class="tab-container">
+                        <button id="tab-reader" class="tab-btn active"><i data-lucide="file-text"></i> Document Reader</button>
+                        <button id="tab-graph" class="tab-btn"><i data-lucide="network"></i> Interactive Graph</button>
+                    </div>
+                    <div class="workspace-actions">
+                        <button id="btn-edit-page" class="secondary-btn hidden" title="Edit this page manually"><i data-lucide="edit-3"></i> Edit</button>
+                        <button id="btn-save-page" class="primary-btn hidden" title="Save changes"><i data-lucide="save"></i> Save</button>
+                        <button id="btn-cancel-edit" class="secondary-btn hidden" title="Cancel edits"><i data-lucide="x"></i> Cancel</button>
+                    </div>
+                </div>
+
+                <!-- WORKSPACE CONTENT CONTAINER -->
+                <div class="workspace-content">
+                    
+                    <!-- WRITER/READER WORKSPACE -->
+                    <div id="reader-view" class="workspace-view active">
+                        <div class="view-header-details">
+                            <h1 id="page-title" class="page-title-heading">Welcome to LLMwiki</h1>
+                            <div id="page-metadata" class="metadata-banner hidden">
+                                <span class="meta-item"><i data-lucide="tag"></i> <span id="meta-tags">None</span></span>
+                                <span class="meta-item"><i data-lucide="calendar"></i> Updated: <span id="meta-updated">N/A</span></span>
+                                <span class="meta-item"><i data-lucide="database"></i> Type: <span id="meta-type">N/A</span></span>
+                            </div>
+                        </div>
+                        
+                        <hr class="header-divider hidden" id="divider">
+                        
+                        <!-- RENDERED MARKDOWN VIEW -->
+                        <div id="markdown-renderer" class="markdown-body">
+                            <div class="intro-screen">
+                                <div class="intro-logo">
+                                    <i data-lucide="brain-circuit"></i>
+                                </div>
+                                <h2>Build a Compounding Personal Knowledge Base</h2>
+                                <p>LLMwiki operates as an intelligent workspace. Instead of standard chat memory or basic search, the agent compiles source documents into structured, interlinked markdown pages that you can explore and browse here.</p>
+                                <div class="quick-start-box">
+                                    <h4>To get started:</h4>
+                                    <ol>
+                                        <li>Create or select a <strong>Project</strong> from the dropdown at the top.</li>
+                                        <li>Click the <i data-lucide="settings"></i> settings icon on the top right to configure your <strong>Gemini API Key</strong>.</li>
+                                        <li>Drop files (PDF, TXT, MD) into the <strong>Raw Sources</strong> panel on the left.</li>
+                                        <li>Click a raw file and select <strong>Compile into Wiki</strong> in the agent panel.</li>
+                                        <li>Browse the generated pages, click links, and view your knowledge network in the <strong>Interactive Graph</strong> tab!</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- MANUAL CODE EDITOR -->
+                        <div id="editor-container" class="hidden">
+                            <textarea id="markdown-editor" spellcheck="false" placeholder="Write markdown here..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- GRAPH VISUALIZATION WORKSPACE -->
+                    <div id="graph-view" class="workspace-view">
+                        <div class="graph-legend">
+                            <span class="legend-item"><span class="legend-dot source-dot"></span> Source Summary</span>
+                            <span class="legend-item"><span class="legend-dot concept-dot"></span> Concept / Entity</span>
+                            <span class="legend-item"><span class="legend-dot core-dot"></span> Index / Log</span>
+                        </div>
+                        <svg id="graph-svg" width="100%" height="100%"></svg>
+                    </div>
+
+                </div>
+            </main>
+
+            <!-- RIGHT PANEL: AI AGENT CONTROL DRAWER -->
+            <aside class="panel agent-panel">
+                <div class="panel-header">
+                    <h3><i data-lucide="sparkles"></i> Operations</h3>
+                    <div class="model-select-container">
+                        <select id="select-model" class="model-select">
+                            <option value="gemini-flash-lite-latest">gemini-flash-lite-latest</option>
+                            <option value="gemini-flash-lite-latest">gemini-flash-lite-latest</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- OPERATION TABS: INGEST, QUERY, LINT -->
+                <div class="agent-tabs">
+                    <button id="agent-tab-ingest" class="agent-tab active">Ingest</button>
+                    <button id="agent-tab-query" class="agent-tab">Query</button>
+                    <button id="agent-tab-lint" class="agent-tab">Lint & Audit</button>
+                </div>
+
+                <div class="agent-content">
+                    <!-- INGEST PANEL -->
+                    <div id="panel-ingest" class="agent-sub-panel active">
+                        <div class="sub-panel-desc">
+                            Compile immutable source documents into your wiki knowledge. Select a file from the list or upload a new one.
+                        </div>
+                        <div class="selected-file-info card">
+                            <div class="card-title">Selected Raw File</div>
+                            <div id="selected-raw-file-name" class="selected-name text-muted">No file selected.</div>
+                            <button id="btn-ingest-file" class="primary-btn full-width" disabled>
+                                <i data-lucide="cpu"></i> Compile Into Wiki
+                            </button>
+                        </div>
+                        <div class="agent-terminal" id="ingest-terminal">
+                            <div class="terminal-line text-info">Waiting for action...</div>
+                        </div>
+                    </div>
+
+                    <!-- QUERY PANEL -->
+                    <div id="panel-query" class="agent-sub-panel">
+                        <div class="sub-panel-desc">
+                            Search your wiki and synthesize an answer drawing from its compounding pages.
+                        </div>
+                        <div class="query-chat-history" id="query-chat-history">
+                            <div class="chat-message agent-msg">
+                                <div class="msg-header">Agent</div>
+                                <div class="msg-body">Ask me anything about your compiled wiki pages. I'll search the relevant files, compile the answers, and cite them!</div>
+                            </div>
+                        </div>
+                        <!-- SAVE ANSWER CARD (DRAFTED BY AGENT) -->
+                        <div id="save-page-card" class="save-page-card card hidden">
+                            <div class="card-title"><i data-lucide="file-plus"></i> Draft Compounding Page</div>
+                            <div class="draft-details">
+                                <span class="draft-lbl">Page:</span> <span id="draft-filename" class="draft-val"></span>
+                            </div>
+                            <button id="btn-save-draft" class="accent-btn small-btn">
+                                <i data-lucide="check"></i> Save Answer as Wiki Page
+                            </button>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" id="query-input" placeholder="Ask a question about the wiki..." autocomplete="off">
+                            <button id="btn-submit-query" class="icon-button primary-btn"><i data-lucide="send"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- LINT PANEL -->
+                    <div id="panel-lint" class="agent-sub-panel">
+                        <div class="sub-panel-desc">
+                            Audit the structure and content of your wiki. Spot contradictions, broken links, orphans, and data gaps.
+                        </div>
+                        <button id="btn-run-lint" class="secondary-btn full-width">
+                            <i data-lucide="clipboard-check"></i> Run Wiki Health Audit
+                        </button>
+                        <div class="agent-terminal" id="lint-terminal">
+                            <div class="terminal-line text-info">Waiting to run audit...</div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i data-lucide="key"></i> API Configuration</h2>
+                <button id="btn-close-settings" class="icon-button"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="desc-text">To coordinate the wiki compilation and analysis, enter your <strong>Gemini API Key</strong>. Keys are stored locally in a <code>.env</code> file in your workspace.</p>
+                <div class="form-group">
+                    <label for="input-api-key">Gemini API Key</label>
+                    <div class="input-with-icon">
+                        <i data-lucide="key" class="input-icon"></i>
+                        <input type="password" id="input-api-key" placeholder="AIzaSy...">
+                    </div>
+                </div>
+                <div id="config-status-msg" class="status-msg hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-save-settings" class="primary-btn"><i data-lucide="check"></i> Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW PROJECT MODAL -->
+    <div id="new-project-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i data-lucide="folder-plus"></i> Create New Project</h2>
+                <button id="btn-close-project-modal" class="icon-button"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="project-name">Project Name</label>
+                    <div class="input-with-icon">
+                        <i data-lucide="folder"></i>
+                        <input type="text" id="project-name" placeholder="My Research Wiki" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="project-description">Description</label>
+                    <textarea id="project-description" placeholder="What is this project about?" rows="3"></textarea>
+                </div>
+                <div id="project-modal-error" class="error-msg hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-cancel-project" class="secondary-btn"><i data-lucide="x"></i> Cancel</button>
+                <button id="btn-create-project" class="primary-btn"><i data-lucide="check"></i> Create Project</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHARE PROJECT MODAL -->
+    <div id="share-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i data-lucide="share2"></i> Share Project</h2>
+                <button id="btn-close-share-modal" class="icon-button"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="desc-text">Share this project with team members and set their permission level.</p>
+                <div class="form-group">
+                    <label for="share-username">Username</label>
+                    <div class="input-with-icon">
+                        <i data-lucide="user"></i>
+                        <input type="text" id="share-username" placeholder="Enter username" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="share-permission">Permission Level</label>
+                    <select id="share-permission" class="form-select">
+                        <option value="read_only">Read Only (View pages)</option>
+                        <option value="read_write">Read & Write (Full access)</option>
+                    </select>
+                </div>
+                <div id="share-modal-error" class="error-msg hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-cancel-share" class="secondary-btn"><i data-lucide="x"></i> Cancel</button>
+                <button id="btn-confirm-share" class="primary-btn"><i data-lucide="check"></i> Share</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEMBERS MODAL -->
+    <div id="members-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i data-lucide="users"></i> Project Members</h2>
+                <button id="btn-close-members-modal" class="icon-button"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="members-list" class="members-list">
+                    <!-- Members will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-close-members" class="secondary-btn"><i data-lucide="x"></i> Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
